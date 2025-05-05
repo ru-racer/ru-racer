@@ -60,17 +60,17 @@ Below is a curated list of publications related to this project:
 - **RDT-RRT: Real-time double-tree rapidly-exploring random tree path planning for autonomous vehicles**  
   J. Yu, C. Chen, A. Arab, J. Yi, X. Pei, X. Guo  
   *Expert Systems with Applications, 240, 122510 (2024)*  
-  [DOI:10.1016/j.eswa.2022.122510](https://doi.org/10.1016/j.eswa.2022.122510)
+  [Link](https://www.sciencedirect.com/science/article/pii/S0957417423030129)
 
 - **Safe agile hazard avoidance system for autonomous vehicles**  
   A. Arab, J. Yi  
-  *US Patent App. 18/209,943 (2024)*
+  *US Patent App. 18/209,943 (2024)*   
   [Link](https://patents.google.com/patent/US20240001964A1/en)
 
 - **Hierarchical framework integrating rapidly-exploring random tree with deep reinforcement learning for autonomous vehicle**  
   J. Yu, A. Arab, J. Yi, X. Pei, X. Guo  
   *Applied Intelligence, 53(13), 16473–16486 (2023)*  
-  [DOI:10.1007/s10489-022-04358-7](https://doi.org/10.1007/s10489-022-04358-7)
+  [Link](https://link.springer.com/article/10.1007/s10489-022-04358-7)
 
 - **Motion planning and control of autonomous aggressive vehicle maneuvers**  
   A. Arab, K. Yu, J. Yu, J. Yi  
@@ -82,7 +82,6 @@ Below is a curated list of publications related to this project:
   *2021 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM)*  
   [Link](https://ieeexplore.ieee.org/document/9517458)
 
-
 - **Safe motion control and planning for autonomous racing vehicles**  
   A. Arab  
   *Rutgers The State University of New Jersey, School of Graduate Studies, 2021*  
@@ -91,19 +90,19 @@ Below is a curated list of publications related to this project:
 - **Safety-guaranteed learning-predictive control for aggressive autonomous vehicle maneuvers**  
   A. Arab, J. Yi  
   *2020 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM)*  
-  [DOI:10.1109/AIM.2020.9159040](https://doi.org/10.1109/AIM.2020.9159040)
+  [Link](https://ieeexplore.ieee.org/document/9159040)
 
 - **Optimal control of wheeled mobile robots: From simulation to real world**  
   A. Arab, Y. Mousavi  
   *2020 American Control Conference (ACC), 583–589*  
-  [DOI:10.23919/ACC45564.2020.9147898](https://doi.org/10.23919/ACC45564.2020.9147898)
+  [Link](https://ieeexplore.ieee.org/document/9147898)
 
 - **Motion planning for aggressive autonomous vehicle maneuvers**  
   A. Arab, K. Yu, J. Yi, D. Song  
   *2016 IEEE International Conference on Automation Science and Engineering (CASE)*  
-  [DOI:10.1109/COASE.2016.7743504](https://doi.org/10.1109/COASE.2016.7743504)
+  [Link](https://ieeexplore.ieee.org/document/7743384)
 
 - **Motion control of autonomous aggressive vehicle maneuvers**  
   A. Arab, K. Yu, J. Yi, Y. Liu  
   *2016 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM)*  
-  [DOI:10.1109/AIM.2016.7576799](https://doi.org/10.1109/AIM.2016.7576799)
+  [Link](https://ieeexplore.ieee.org/document/7577009)
