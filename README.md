@@ -65,35 +65,28 @@ Below is a curated list of publications related to this project:
 - **Safe agile hazard avoidance system for autonomous vehicles**  
   A. Arab, J. Yi  
   *US Patent App. 18/209,943 (2024)*
+  [Link](https://patents.google.com/patent/US20240001964A1/en)
 
 - **Hierarchical framework integrating rapidly-exploring random tree with deep reinforcement learning for autonomous vehicle**  
   J. Yu, A. Arab, J. Yi, X. Pei, X. Guo  
   *Applied Intelligence, 53(13), 16473–16486 (2023)*  
   [DOI:10.1007/s10489-022-04358-7](https://doi.org/10.1007/s10489-022-04358-7)
 
-- **Safe Iterative Feedback Linearization Control Design for Collaborative Robots**  
-  A. Arab  
-  *TechRxiv, 1–7 (2023)*
-
 - **Motion planning and control of autonomous aggressive vehicle maneuvers**  
   A. Arab, K. Yu, J. Yu, J. Yi  
   *IEEE Transactions on Automation Science and Engineering, 21(2), 1488–1500 (2023)*  
-  [DOI:10.1109/TASE.2023.3251234](https://doi.org/10.1109/TASE.2023.3251234)
+  [Link](https://ieeexplore.ieee.org/document/10053639)
 
 - **Instructed reinforcement learning control of safe autonomous J-turn vehicle maneuvers**  
   A. Arab, J. Yi  
   *2021 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM)*  
-  [DOI:10.1109/AIM.2021.9517493](https://doi.org/10.1109/AIM.2021.9517493)
+  [Link](https://ieeexplore.ieee.org/document/9517458)
 
-- **Safe predictive control of four-wheel mobile robot with independent steering and drive**  
-  A. Arab, I. Hadžić, J. Yi  
-  *2021 American Control Conference (ACC), 2962–2967*  
-  [DOI:10.23919/ACC50511.2021.9483083](https://doi.org/10.23919/ACC50511.2021.9483083)
 
 - **Safe motion control and planning for autonomous racing vehicles**  
   A. Arab  
   *Rutgers The State University of New Jersey, School of Graduate Studies, 2021*  
-  [Link](https://www.researchwithrutgers.com/en/publications/safe-motion-control-and-planning-for-autonomous-racing-vehicles)
+  [Link](https://rucore.libraries.rutgers.edu/rutgers-lib/65629/)
 
 - **Safety-guaranteed learning-predictive control for aggressive autonomous vehicle maneuvers**  
   A. Arab, J. Yi  
