@@ -143,7 +143,3 @@ Below is a curated list of publications related to this project:
   A. Arab, K. Yu, J. Yi, Y. Liu  
   *2016 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM)*  
   [Link](https://ieeexplore.ieee.org/document/7577009)
-
-- **2021 American Control Conference (ACC), 2962–2967 (2021)**  
-  A. Arab, J. Yi  
-  *(citation provided by project owner; add link/DOI if desired)*
