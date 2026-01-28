@@ -66,6 +66,10 @@ Outputs are written under `cpp/results/run_*/` as CSV, and can be visualized on 
 
 ![tree on track with start/goal](docs/images/rrt_tree_on_track_start_goal.png)
 
+- **Trajectory colored by vehicle speed \(v_x\) (same colormap for RRT ref and NMPC exec)**
+
+![speed colored trajectory](docs/images/rrt_speed_on_track.png)
+
 ### Clone this repository:
    bash
    git clone https://github.com/ru-racer/ru-racer.git
