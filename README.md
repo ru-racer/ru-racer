@@ -30,6 +30,42 @@ This architecture supports tight integration between high-frequency sensor acqui
 
 This repository includes MATLAB comparison scripts for analyzing different driving strategies in stunt-level vehicle maneuvers.
 
+### Repo layout
+
+- **`matlab/`**: original MATLAB implementations (kept intact, only moved into a folder)
+- **`cpp/`**: C++ planning + tracking baseline (Spars-RRT + NMPC-style tracker) with CSV logging
+
+### C++ (Spars-RRT + NMPC) quick start
+
+Build:
+
+```bash
+cmake -S cpp -B cpp/build
+cmake --build cpp/build -j
+```
+
+Run an example on the provided track map:
+
+```bash
+./cpp/build/ru_racer --config cpp/data/track_spars_rrt.cfg
+```
+
+Outputs are written under `cpp/results/run_*/` as CSV, and can be visualized on the track image.
+
+#### Example outputs
+
+- **Track image used for mapping**
+
+![track image](docs/images/track.png)
+
+- **Generated occupancy map (white = free)**
+
+![track occupancy debug](docs/images/track_map_from_png_debug.png)
+
+- **Explored tree + best path + NMPC execution (start/goal shown)**
+
+![tree on track with start/goal](docs/images/rrt_tree_on_track_start_goal.png)
+
 ### Clone this repository:
    bash
    git clone https://github.com/ru-racer/ru-racer.git
@@ -107,3 +143,7 @@ Below is a curated list of publications related to this project:
   A. Arab, K. Yu, J. Yi, Y. Liu  
   *2016 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM)*  
   [Link](https://ieeexplore.ieee.org/document/7577009)
+
+- **2021 American Control Conference (ACC), 2962–2967 (2021)**  
+  A. Arab, J. Yi  
+  *(citation provided by project owner; add link/DOI if desired)*
