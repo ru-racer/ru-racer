@@ -2,6 +2,7 @@
 
 #include "ru_racer/math.hpp"
 
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <vector>
@@ -33,6 +34,22 @@ struct BikeParams {
   Tire tiref{10.275, 1.56, -0.85};
 };
 
+// Friction parameters that can be updated online during a run (e.g., from an estimator).
+// We model this as a scale factor on the Magic Formula peak (D) front/rear.
+struct FrictionConfig {
+  double mu_scale_f0 = 1.0;
+  double mu_scale_r0 = 1.0;
+  double mu_scale_f_min = 0.3;
+  double mu_scale_f_max = 1.5;
+  double mu_scale_r_min = 0.3;
+  double mu_scale_r_max = 1.5;
+
+  // If enabled, friction authority fades near zero speed to avoid unphysical sign flips when braking.
+  // Effective scale = mu_scale_* * (1 - exp(-|vx| / mu_speed_vscale_mps))
+  bool mu_speed_dependent = false;
+  double mu_speed_vscale_mps = 1.0;
+};
+
 class BikeModel {
  public:
   static constexpr std::size_t NX = 6;
@@ -52,6 +69,22 @@ class BikeModel {
   }
   void setCircleObstacles(std::vector<CircleObstacle> obs) { circles_ = std::move(obs); }
   void setOccupancyGrid(const OccupancyGrid* grid) { grid_ = grid; }
+
+  // Runtime friction update hooks (do not affect static vehicle params like mass/geometry).
+  void setFrictionConfig(const FrictionConfig& fc) {
+    friction_cfg_ = fc;
+    mu_scale_f_ = fc.mu_scale_f0;
+    mu_scale_r_ = fc.mu_scale_r0;
+  }
+  void setFrictionScales(double mu_scale_f, double mu_scale_r) {
+    mu_scale_f_ = std::clamp(mu_scale_f, friction_cfg_.mu_scale_f_min, friction_cfg_.mu_scale_f_max);
+    mu_scale_r_ = std::clamp(mu_scale_r, friction_cfg_.mu_scale_r_min, friction_cfg_.mu_scale_r_max);
+  }
+  double muScaleFront() const { return mu_scale_f_; }
+  double muScaleRear() const { return mu_scale_r_; }
+
+  void setClampVxNonnegative(bool on) { clamp_vx_nonnegative_ = on; }
+  bool clampVxNonnegative() const { return clamp_vx_nonnegative_; }
 
   const Vec<NX>& state() const { return x_; }
   const Vec<NU>& input() const { return u_; }
@@ -80,6 +113,10 @@ class BikeModel {
   bool checkFeasible(const Vec<NX>& x, const Vec<NX>& dx) const;
 
   BikeParams p_{};
+  FrictionConfig friction_cfg_{};
+  double mu_scale_f_ = 1.0;
+  double mu_scale_r_ = 1.0;
+  bool clamp_vx_nonnegative_ = false;
   Vec<NX> x_ = vzeros<NX>();
   Vec<NU> u_ = vzeros<NU>();
   Vec<NX> goal_ = vzeros<NX>();

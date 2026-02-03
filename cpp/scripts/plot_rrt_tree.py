@@ -57,21 +57,40 @@ def read_kv_cfg(path: str) -> Dict[str, str]:
     return kv
 
 
+def read_traj_csv(path: str, x_col: str, y_col: str, v_col: Optional[str]) -> Dict[str, List[float]]:
+    xs: List[float] = []
+    ys: List[float] = []
+    vs: List[float] = []
+    with open(path, "r", newline="") as f:
+        r = csv.DictReader(f)
+        for row in r:
+            if x_col not in row or y_col not in row:
+                continue
+            xs.append(float(row[x_col]))
+            ys.append(float(row[y_col]))
+            if v_col is not None and v_col in row:
+                vs.append(float(row[v_col]))
+    return {"x": xs, "y": ys, "v": vs}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Plot explored RRT* tree from rrt_nodes.csv")
     ap.add_argument("--nodes", required=True, help="Path to rrt_nodes.csv")
     ap.add_argument("--path", default=None, help="Optional path to rrt_path.csv to overlay best path")
-    ap.add_argument("--traj", default=None, help="Optional trajectory CSV to overlay (e.g., rrt_ref_traj.csv or nmpc_exec.csv).")
+    ap.add_argument("--traj", default=None, help="Optional trajectory CSV to overlay (e.g., rrt_ref_traj.csv).")
+    ap.add_argument("--traj2", default=None, help="Optional 2nd trajectory CSV to overlay (e.g., nmpc_exec.csv).")
     ap.add_argument(
         "--traj-cols",
         default="x,y",
         help="Which columns to use for trajectory XY (default: x,y). For nmpc_exec.csv use x,y; for refs use x,y.",
     )
-    ap.add_argument("--traj-label", default="trajectory", help="Legend label for --traj overlay.")
+    ap.add_argument("--traj-label", default="rrt ref", help="Legend label for --traj overlay.")
+    ap.add_argument("--traj2-label", default="nmpc exec", help="Legend label for --traj2 overlay.")
+    ap.add_argument("--traj-vcol", default="vx", help="Velocity column used when --color-by=speed (default: vx).")
     ap.add_argument("--out", default=None, help="Output image path (png/pdf). If omitted, show interactive plot.")
     ap.add_argument("--stride", type=int, default=1, help="Plot every N-th edge (for speed on big trees).")
     ap.add_argument("--max-edges", type=int, default=0, help="Limit number of edges drawn (0 = no limit).")
-    ap.add_argument("--color-by", choices=["none", "cost"], default="cost", help="Edge color scheme.")
+    ap.add_argument("--color-by", choices=["none", "cost", "speed"], default="cost", help="Colorbar source.")
     ap.add_argument("--bg", default=None, help="Optional background image (e.g., track.jpg) to plot on top of.")
     ap.add_argument(
         "--bg-transform",
@@ -134,7 +153,8 @@ def main() -> int:
             cbar = fig.colorbar(lc, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label("cumulative cost")
         else:
-            lc = LineCollection(segs, colors=(0.0, 0.6, 0.0, 0.5), linewidths=0.4)
+            # In speed mode, keep the tree neutral so the colorbar can represent speed.
+            lc = LineCollection(segs, colors=(0.0, 0.6, 0.0, 0.30), linewidths=0.35)
             ax.add_collection(lc)
 
     xs = []
@@ -161,36 +181,98 @@ def main() -> int:
             xx, yy = to_plot_xy(by_id[i].x, by_id[i].y)
             px.append(xx)
             py.append(yy)
-        ax.plot(px, py, "-", linewidth=2.0, color="dodgerblue", label="best path")
+        if args.color_by == "speed":
+            ax.plot(px, py, "-", linewidth=1.5, color="black", alpha=0.7, label="best path")
+        else:
+            ax.plot(px, py, "-", linewidth=2.0, color="dodgerblue", label="best path")
 
-    # Overlay an arbitrary trajectory CSV (e.g., rrt_ref_traj.csv or nmpc_exec.csv)
-    traj_csv = args.traj
-    if traj_csv is None:
-        # prefer executed NMPC if present, else reference
-        guess_exec = os.path.join(os.path.dirname(args.nodes), "nmpc_exec.csv")
+    # Trajectory overlays (RRT ref + NMPC exec) with shared speed colormap
+    traj1 = args.traj
+    traj2 = args.traj2
+    if traj1 is None:
         guess_ref = os.path.join(os.path.dirname(args.nodes), "rrt_ref_traj.csv")
+        if os.path.exists(guess_ref):
+            traj1 = guess_ref
+    if traj2 is None:
+        guess_exec = os.path.join(os.path.dirname(args.nodes), "nmpc_exec.csv")
         if os.path.exists(guess_exec):
-            traj_csv = guess_exec
-            args.traj_label = "nmpc exec"
-        elif os.path.exists(guess_ref):
-            traj_csv = guess_ref
-            args.traj_label = "rrt ref"
+            traj2 = guess_exec
 
-    if traj_csv and os.path.exists(traj_csv):
-        cx, cy = [c.strip() for c in args.traj_cols.split(",")]
-        tx, ty = [], []
-        with open(traj_csv, "r", newline="") as f:
-            r = csv.DictReader(f)
-            for row in r:
-                if cx not in row or cy not in row:
-                    continue
-                xx = float(row[cx])
-                yy = float(row[cy])
+    cx, cy = [c.strip() for c in args.traj_cols.split(",")]
+    vcol = args.traj_vcol if args.color_by == "speed" else None
+
+    traj_data = []
+    if traj1 and os.path.exists(traj1):
+        traj_data.append(("traj1", args.traj_label, read_traj_csv(traj1, cx, cy, vcol)))
+    if traj2 and os.path.exists(traj2):
+        traj_data.append(("traj2", args.traj2_label, read_traj_csv(traj2, cx, cy, vcol)))
+
+    if args.color_by == "speed" and traj_data:
+        all_v = []
+        for _, _, d in traj_data:
+            all_v.extend(d["v"])
+        vmin = float(np.min(all_v)) if all_v else 0.0
+        vmax = float(np.max(all_v)) if all_v else 1.0
+
+        cmap = plt.get_cmap("turbo") if hasattr(plt.cm, "turbo") else plt.get_cmap("viridis")
+
+        def add_traj(d, linestyle, lw):
+            xs_t = d["x"]
+            ys_t = d["y"]
+            vs_t = d["v"]
+            if len(xs_t) < 2 or len(vs_t) < 2:
+                return None
+            seg = []
+            cv = []
+            for i in range(1, len(xs_t)):
+                p0 = to_plot_xy(xs_t[i - 1], ys_t[i - 1])
+                p1 = to_plot_xy(xs_t[i], ys_t[i])
+                seg.append([p0, p1])
+                cv.append(vs_t[i])
+            lc_t = LineCollection(seg, cmap=cmap, linewidths=lw, linestyles=linestyle)
+            lc_t.set_array(np.array(cv, dtype=float))
+            lc_t.set_clim(vmin, vmax)
+            ax.add_collection(lc_t)
+            return lc_t
+
+        lc_for_cb = None
+        for key, label, d in traj_data:
+            if key == "traj1":
+                add_traj(d, "solid", 3.0)
+                ax.plot([], [], color="red", linewidth=3.0, label=label)
+            else:
+                add_traj(d, (0, (6, 3)), 3.0)
+                ax.plot([], [], color="red", linewidth=3.0, linestyle="--", label=label)
+            lc_for_cb = lc_for_cb or None
+
+        # Use the first trajectory's collection for the colorbar (both share same limits/cmap).
+        # We rebuild one small collection for colorbar binding.
+        first = traj_data[0][2]
+        lc_for_cb = add_traj(first, "solid", 0.0)
+        if lc_for_cb is not None:
+            cbar = fig.colorbar(lc_for_cb, ax=ax, fraction=0.046, pad=0.04)
+            cbar.set_label("v_x [m/s]")
+    else:
+        # Non-speed mode: keep prior behavior (single traj auto-detect)
+        traj_csv = args.traj
+        if traj_csv is None:
+            guess_exec = os.path.join(os.path.dirname(args.nodes), "nmpc_exec.csv")
+            guess_ref = os.path.join(os.path.dirname(args.nodes), "rrt_ref_traj.csv")
+            if os.path.exists(guess_exec):
+                traj_csv = guess_exec
+                args.traj_label = "nmpc exec"
+            elif os.path.exists(guess_ref):
+                traj_csv = guess_ref
+                args.traj_label = "rrt ref"
+        if traj_csv and os.path.exists(traj_csv):
+            d = read_traj_csv(traj_csv, cx, cy, None)
+            tx, ty = [], []
+            for xx, yy in zip(d["x"], d["y"]):
                 px, py = to_plot_xy(xx, yy)
                 tx.append(px)
                 ty.append(py)
-        if tx:
-            ax.plot(tx, ty, "-", linewidth=2.0, color="red", label=args.traj_label)
+            if tx:
+                ax.plot(tx, ty, "-", linewidth=2.0, color="red", label=args.traj_label)
 
     # Start/goal markers (from config)
     if args.show_start_goal:

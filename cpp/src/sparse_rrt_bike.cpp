@@ -293,9 +293,69 @@ void SparseRrtBikePlanner::drain(int new_ind, int nearest_ind) {
   }
 }
 
-void SparseRrtBikePlanner::rewire(int /*new_ind*/, const std::vector<int>& /*neigh*/, int /*min_ind*/) {
-  // Exact port of MATLAB rewire is implemented in a follow-up patch once we switch main to this planner.
-  // (It needs closed-loop feasibility checks and subtree cost propagation.)
+void SparseRrtBikePlanner::rewire(int new_ind, const std::vector<int>& neigh, int min_ind) {
+  // Port of MATLAB `rewire(this, new_ind, Neighbors, min_ind)`:
+  // - estimate if routing through new_ind could improve a neighbor
+  // - do CL feasibility check via run_Dyn_CL equivalent
+  // - if feasible, re-parent neighbor and subtract difCost from its entire subtree cum_cost
+
+  for (int idx = static_cast<int>(neigh.size()) - 1; idx >= 0; --idx) {
+    const int nid = neigh[static_cast<std::size_t>(idx)];
+    if (nid == min_ind || nid <= 0 || nid >= static_cast<int>(res_.nodes.size())) continue;
+
+    const double est = res_.nodes[static_cast<std::size_t>(new_ind)].cum_cost + evalCostEst(new_ind, res_.nodes[static_cast<std::size_t>(nid)].x);
+    if (!(est < res_.nodes[static_cast<std::size_t>(nid)].cum_cost)) continue;
+
+    // Closed-loop check from new_ind toward neighbor's current state, for max_step horizon.
+    model_.reset(res_.nodes[static_cast<std::size_t>(new_ind)].x, Vec<BikeModel::NU>{0.0, 0.0});
+    model_.simulateClosedLoopTo(res_.nodes[static_cast<std::size_t>(nid)].x, p_.max_step);
+    if (!model_.isFeasible()) continue;
+
+    const auto x_reached = model_.state();
+    const double tCost = res_.nodes[static_cast<std::size_t>(new_ind)].cum_cost + evalCost(new_ind, x_reached);
+    if (!(tCost < res_.nodes[static_cast<std::size_t>(nid)].cum_cost)) continue;
+
+    const double difCost = res_.nodes[static_cast<std::size_t>(nid)].cum_cost - tCost;
+
+    // Update subtree cumulative costs (all descendants).
+    std::vector<int> stack;
+    std::vector<int> allkids;
+
+    // First-level kids of nid:
+    for (int i = 0; i < static_cast<int>(res_.nodes.size()); ++i) {
+      if (res_.nodes[static_cast<std::size_t>(i)].parent == nid) stack.push_back(i);
+    }
+    allkids = stack;
+    while (!stack.empty()) {
+      const int cur = stack.back();
+      stack.pop_back();
+      for (int i = 0; i < static_cast<int>(res_.nodes.size()); ++i) {
+        if (res_.nodes[static_cast<std::size_t>(i)].parent == cur) {
+          allkids.push_back(i);
+          stack.push_back(i);
+        }
+      }
+    }
+
+    // Re-parent nid to new_ind
+    const int old_parent = res_.nodes[static_cast<std::size_t>(nid)].parent;
+    if (old_parent >= 0) res_.nodes[static_cast<std::size_t>(old_parent)].children -= 1;
+    res_.nodes[static_cast<std::size_t>(nid)].parent = new_ind;
+    res_.nodes[static_cast<std::size_t>(nid)].u_from_parent = model_.input();
+    res_.nodes[static_cast<std::size_t>(nid)].cost_from_parent = evalCost(new_ind, res_.nodes[static_cast<std::size_t>(nid)].x);
+    res_.nodes[static_cast<std::size_t>(nid)].time_from_parent = model_.lastCost();
+    res_.nodes[static_cast<std::size_t>(nid)].cum_cost = tCost;
+    res_.nodes[static_cast<std::size_t>(nid)].cum_time = res_.nodes[static_cast<std::size_t>(new_ind)].cum_time + res_.nodes[static_cast<std::size_t>(nid)].time_from_parent;
+    res_.nodes[static_cast<std::size_t>(new_ind)].children += 1;
+
+    for (int kid : allkids) {
+      if (kid >= 0 && kid < static_cast<int>(res_.nodes.size())) {
+        res_.nodes[static_cast<std::size_t>(kid)].cum_cost -= difCost;
+      }
+    }
+
+    res_.rewired += 1;
+  }
 }
 
 SparseRrtBikePlanner::ResultT SparseRrtBikePlanner::plan() {

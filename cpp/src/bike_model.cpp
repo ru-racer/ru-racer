@@ -19,6 +19,7 @@ Vec<BikeModel::NX> BikeModel::step(const Vec<NU>& u) {
   u_ = u;
   const auto dx = dynamics(x_, u_);
   x_ = add(x_, scale(dx, p_.dt));
+  if (clamp_vx_nonnegative_ && x_[3] < 0.0) x_[3] = 0.0;
   feasible_ = checkFeasible(x_, dx);
   return x_;
 }
@@ -45,8 +46,15 @@ Vec<BikeModel::NX> BikeModel::dynamics(const Vec<NX>& x, const Vec<NU>& u) const
   const double sf = std::sqrt(sfy * sfy + sfx * sfx);
   const double sr = std::sqrt(sry * sry + srx * srx);
 
-  const auto mur = p_.tirer.D * std::sin(p_.tirer.C * std::atan(p_.tirer.B * sr));
-  const auto muf = p_.tiref.D * std::sin(p_.tiref.C * std::atan(p_.tiref.B * sf));
+  // Online-updatable friction scaling: we scale the Magic Formula peak (D).
+  double vfac = 1.0;
+  if (friction_cfg_.mu_speed_dependent) {
+    const double v = std::abs(vx);
+    const double vs = std::max(1e-6, friction_cfg_.mu_speed_vscale_mps);
+    vfac = 1.0 - std::exp(-v / vs);
+  }
+  const auto mur = (p_.tirer.D * (mu_scale_r_ * vfac)) * std::sin(p_.tirer.C * std::atan(p_.tirer.B * sr));
+  const auto muf = (p_.tiref.D * (mu_scale_f_ * vfac)) * std::sin(p_.tiref.C * std::atan(p_.tiref.B * sf));
 
   double mufx = 0.0, mufy = 0.0;
   if (std::abs(sf) > 0.01) {

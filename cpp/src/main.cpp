@@ -1,142 +1,27 @@
 #include "ru_racer/bike_model.hpp"
 #include "ru_racer/config.hpp"
 #include "ru_racer/csv.hpp"
+#include "ru_racer/four_wheel_model.hpp"
 #include "ru_racer/nmpc.hpp"
 #include "ru_racer/occupancy_grid.hpp"
 #include "ru_racer/rrt_star.hpp"
 #include "ru_racer/sparse_rrt_bike.hpp"
 
-#include <chrono>
-#include <cstdio>
+#include "ru_racer/app/csv_dump.hpp"
+#include "ru_racer/app/fs_utils.hpp"
+#include "ru_racer/app/model_config.hpp"
+#include "ru_racer/app/obstacles.hpp"
+#include "ru_racer/app/validation.hpp"
+#include "ru_racer/app/visualize.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
 using namespace ru_racer;
-
-static std::string nowStamp() {
-  using clock = std::chrono::system_clock;
-  const auto t = clock::to_time_t(clock::now());
-  std::tm tm{};
-#if defined(_WIN32)
-  localtime_s(&tm, &t);
-#else
-  localtime_r(&t, &tm);
-#endif
-  char buf[32];
-  std::snprintf(buf, sizeof(buf), "%04d%02d%02d_%02d%02d%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-                tm.tm_min, tm.tm_sec);
-  return std::string(buf);
-}
-
-static bool loadCircleObstaclesCsv(const fs::path& path, std::vector<CircleObstacle>& out) {
-  std::ifstream in(path);
-  if (!in.good()) return false;
-  out.clear();
-  std::string line;
-  while (std::getline(in, line)) {
-    if (line.empty() || line[0] == '#') continue;
-    std::stringstream ss(line);
-    std::string a, b, c;
-    if (!std::getline(ss, a, ',')) continue;
-    if (!std::getline(ss, b, ',')) continue;
-    if (!std::getline(ss, c, ',')) continue;
-    CircleObstacle o{};
-    o.x = std::stod(a);
-    o.y = std::stod(b);
-    o.r = std::stod(c);
-    out.push_back(o);
-  }
-  return true;
-}
-
-static void writePathCsv(const fs::path& path,
-                         const std::vector<int>& path_ids,
-                         const std::vector<RrtNode>& nodes) {
-  CsvWriter w(path);
-  w.writeRow("idx", "node_id", "parent", "cum_cost", "cum_time", "x", "y", "psi", "vx", "vy", "r", "u_delta", "u_sfx");
-  for (std::size_t i = 0; i < path_ids.size(); ++i) {
-    const int id = path_ids[i];
-    const auto& n = nodes[static_cast<std::size_t>(id)];
-    w.writeRow(static_cast<int>(i), id, n.parent, n.cum_cost, n.cum_time, n.x[0], n.x[1], n.x[2], n.x[3], n.x[4], n.x[5],
-               n.u_from_parent[0], n.u_from_parent[1]);
-  }
-}
-
-static void writeNodesCsv(const fs::path& path, const std::vector<RrtNode>& nodes) {
-  CsvWriter w(path);
-  w.writeRow("node_id", "parent", "cost_from_parent", "cum_cost", "time_from_parent", "cum_time", "dist_to_goal",
-             "x", "y", "psi", "vx", "vy", "r", "u_delta", "u_sfx");
-  for (std::size_t i = 0; i < nodes.size(); ++i) {
-    const auto& n = nodes[i];
-    w.writeRow(static_cast<int>(i), n.parent, n.cost_from_parent, n.cum_cost, n.time_from_parent, n.cum_time, n.dist_to_goal,
-               n.x[0], n.x[1], n.x[2], n.x[3], n.x[4], n.x[5], n.u_from_parent[0], n.u_from_parent[1]);
-  }
-}
-
-static std::vector<Vec<BikeModel::NX>> buildReferenceTrajectory(const BikeModel& model_template,
-                                                                const std::vector<int>& path_ids,
-                                                                const std::vector<RrtNode>& nodes,
-                                                                double segment_max_step) {
-  std::vector<Vec<BikeModel::NX>> ref;
-  if (path_ids.empty()) return ref;
-
-  BikeModel m = model_template;
-  m.reset(nodes[static_cast<std::size_t>(path_ids.front())].x, Vec<BikeModel::NU>{0.0, 0.0});
-  ref.push_back(m.state());
-
-  for (std::size_t i = 1; i < path_ids.size(); ++i) {
-    const auto& child = nodes[static_cast<std::size_t>(path_ids[i])];
-    const auto u = child.u_from_parent;
-    const double dur = (child.time_from_parent > 0.0 && child.time_from_parent < segment_max_step) ? child.time_from_parent : segment_max_step;
-    const int steps = std::max(1, static_cast<int>(std::floor(dur / m.dt() + 1e-9)));
-    for (int k = 0; k < steps; ++k) {
-      m.step(u);
-      ref.push_back(m.state());
-    }
-  }
-  return ref;
-}
-
-static void writeNodesCsvSparse(const fs::path& path, const SparseRrtBikePlanner::ResultT& res) {
-  CsvWriter w(path);
-  w.writeRow("node_id", "parent", "children", "success", "cost_from_parent", "cum_cost", "time_from_parent", "cum_time", "dist_to_goal",
-             "x", "y", "psi", "vx", "vy", "r", "u_delta", "u_sfx");
-  for (std::size_t i = 0; i < res.nodes.size(); ++i) {
-    const auto& n = res.nodes[i];
-    w.writeRow(static_cast<int>(i), n.parent, n.children, n.success,
-               n.cost_from_parent, n.cum_cost, n.time_from_parent, n.cum_time, n.dist_to_goal,
-               n.x[0], n.x[1], n.x[2], n.x[3], n.x[4], n.x[5],
-               n.u_from_parent[0], n.u_from_parent[1]);
-  }
-}
-
-static void writePathCsvSparse(const fs::path& path, const std::vector<int>& path_ids, const SparseRrtBikePlanner::ResultT& res) {
-  CsvWriter w(path);
-  w.writeRow("idx", "node_id", "parent", "cum_cost", "cum_time", "x", "y", "psi", "vx", "vy", "r", "u_delta", "u_sfx");
-  for (std::size_t i = 0; i < path_ids.size(); ++i) {
-    const int id = path_ids[i];
-    const auto& n = res.nodes[static_cast<std::size_t>(id)];
-    w.writeRow(static_cast<int>(i), id, n.parent, n.cum_cost, n.cum_time, n.x[0], n.x[1], n.x[2], n.x[3], n.x[4], n.x[5],
-               n.u_from_parent[0], n.u_from_parent[1]);
-  }
-}
-
-static std::vector<int> extractPathSparse(const SparseRrtBikePlanner::ResultT& res, int target) {
-  if (target < 0 || target >= static_cast<int>(res.nodes.size())) return {};
-  std::vector<int> p;
-  int cur = target;
-  while (cur >= 0) {
-    p.push_back(cur);
-    cur = res.nodes[static_cast<std::size_t>(cur)].parent;
-  }
-  std::reverse(p.begin(), p.end());
-  return p;
-}
 
 int main(int argc, char** argv) {
   fs::path config_path = fs::path("cpp") / "data" / "default.cfg";
@@ -154,21 +39,21 @@ int main(int argc, char** argv) {
   }
 
   const fs::path out_root = cfg.getString("output_root", "cpp/results");
-  const fs::path out_dir = out_root / ("run_" + nowStamp());
+  const fs::path out_dir = out_root / ("run_" + ru_racer::app::nowStamp());
   fs::create_directories(out_dir);
 
-  // Bike params
-  BikeParams bp{};
-  bp.dt = cfg.getDouble("dt", bp.dt);
-  bp.rewiring_value = cfg.getDouble("rewiring_value", bp.rewiring_value);
+  const std::string mode = cfg.getString("mode", "plan");
 
+  // Bike params
+  BikeParams bp = ru_racer::app::loadBikeParamsFromConfig(cfg);
   BikeModel bike(bp);
+  ru_racer::app::configureBikeRuntimeParams(bike, cfg);
 
   // Obstacles / map
   std::vector<CircleObstacle> circles;
   const auto obstacles_csv = cfg.getString("obstacles_csv", "");
   if (!obstacles_csv.empty()) {
-    if (loadCircleObstaclesCsv(obstacles_csv, circles)) bike.setCircleObstacles(circles);
+    if (ru_racer::app::loadCircleObstaclesCsv(obstacles_csv, circles)) bike.setCircleObstacles(circles);
   }
 
   OccupancyGrid grid;
@@ -203,6 +88,29 @@ int main(int argc, char** argv) {
     }
   } else {
     std::cerr << "WARN: no occupancy map configured; planner will ignore track boundaries.\n";
+  }
+
+  // Validation mode: run open-loop scenarios in open space (no planning/tracking).
+  if (mode == "validate") {
+    const std::string models = cfg.getString("validate_models", "bike");
+    bool ok = true;
+    if (models == "bike" || models == "both") {
+      ok = ok && ru_racer::app::runOpenLoopValidation(bike, cfg, out_dir);
+    }
+    if (models == "four_wheel" || models == "both") {
+      FourWheelParams fp = ru_racer::app::loadFourWheelParamsFromConfig(cfg);
+      FourWheelModel fw(fp);
+      ru_racer::app::configureFourWheelRuntimeParams(fw, cfg);
+      ok = ok && ru_racer::app::runOpenLoopValidationFourWheel(fw, cfg, out_dir);
+    }
+    // Copy config used
+    {
+      std::ifstream in(config_path);
+      std::ofstream out(out_dir / "config_used.cfg");
+      out << in.rdbuf();
+    }
+    std::cout << "Done (validate). Results in: " << out_dir << "\n";
+    return ok ? 0 : 2;
   }
 
   // Start/goal
@@ -280,7 +188,7 @@ int main(int argc, char** argv) {
     std::cout << "Planning algorithm: " << algo << " ...\n";
     const auto res = planner.plan();
 
-    writeNodesCsvSparse(out_dir / "rrt_nodes.csv", res);
+    ru_racer::app::writeNodesCsvSparse(out_dir / "rrt_nodes.csv", res);
 
     // Pick best goal node (min cum_cost), like MATLAB plotting.
     int best_goal = -1;
@@ -297,8 +205,8 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    path_ids = extractPathSparse(res, best_goal);
-    writePathCsvSparse(out_dir / "rrt_path.csv", path_ids, res);
+    path_ids = ru_racer::app::extractPathSparse(res, best_goal);
+    ru_racer::app::writePathCsvSparse(out_dir / "rrt_path.csv", path_ids, res);
 
     // Convert sparse nodes format into dt-reference by replaying u_from_parent.
     // This is analogous to MATLAB FollowTrajectory.
@@ -316,7 +224,7 @@ int main(int argc, char** argv) {
       rn.time_from_parent = n.time_from_parent;
       fake.push_back(rn);
     }
-    ref = buildReferenceTrajectory(bike, path_ids, fake, rp.max_step);
+    ref = ru_racer::app::buildReferenceTrajectory(bike, path_ids, fake, rp.max_step);
   } else {
     std::cerr << "Unknown algorithm=" << algo << " (expected rrt|rrt_star|spars_rrt|spars_rrt_star)\n";
     return 2;
@@ -365,6 +273,15 @@ int main(int argc, char** argv) {
     std::ifstream in(config_path);
     std::ofstream out(out_dir / "config_used.cfg");
     out << in.rdbuf();
+  }
+
+  // Auto-generate visuals
+  const bool auto_viz = cfg.getBool("auto_visualize", true);
+  if (auto_viz) {
+    const fs::path bg = cfg.getString("viz_bg", "track.png");
+    const std::string bg_transform = cfg.getString("viz_bg_transform", "track");
+    const bool show_start_goal = cfg.getBool("viz_show_start_goal", true);
+    ru_racer::app::tryAutoVisualize(out_dir, bg, bg_transform, show_start_goal);
   }
 
   std::cout << "Done. Results in: " << out_dir << "\n";
