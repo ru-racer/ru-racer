@@ -50,6 +50,8 @@ inline void configureBikeRuntimeParams(BikeModel& bike, const KeyValueConfig& cf
   // Friction (online-updatable): set initial estimate + bounds.
   bike.setFrictionConfig(loadFrictionConfigFromConfig(cfg));
   bike.setClampVxNonnegative(cfg.getBool("model_clamp_vx_nonnegative", false));
+  bike.setMapVxLimits(cfg.getDouble("map_vx_min", bike.mapVxMin()),
+                      cfg.getDouble("map_vx_max", bike.mapVxMax()));
 }
 
 inline FourWheelParams loadFourWheelParamsFromConfig(const KeyValueConfig& cfg) {

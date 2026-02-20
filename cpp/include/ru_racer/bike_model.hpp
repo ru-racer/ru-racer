@@ -70,6 +70,15 @@ class BikeModel {
   void setCircleObstacles(std::vector<CircleObstacle> obs) { circles_ = std::move(obs); }
   void setOccupancyGrid(const OccupancyGrid* grid) { grid_ = grid; }
 
+  // Optional vx limits used only when an occupancy grid is active (mirrors MATLAB map feasibility checks).
+  // Defaults match the original small-car track settings.
+  void setMapVxLimits(double vx_min, double vx_max) {
+    map_vx_min_ = vx_min;
+    map_vx_max_ = vx_max;
+  }
+  double mapVxMin() const { return map_vx_min_; }
+  double mapVxMax() const { return map_vx_max_; }
+
   // Runtime friction update hooks (do not affect static vehicle params like mass/geometry).
   void setFrictionConfig(const FrictionConfig& fc) {
     friction_cfg_ = fc;
@@ -128,6 +137,9 @@ class BikeModel {
 
   std::vector<CircleObstacle> circles_{};
   const OccupancyGrid* grid_ = nullptr;
+
+  double map_vx_min_ = 0.0;
+  double map_vx_max_ = 5.0;
 
   bool feasible_ = true;
   double last_cost_ = 0.0;

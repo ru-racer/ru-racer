@@ -27,7 +27,9 @@ double NmpcTracker::rolloutCostDeltaSeq(const Vec<BikeModel::NX>& x0,
   double J = 0.0;
   const int N = std::min(static_cast<int>(ref_window.size()), p_.horizon_steps);
   for (int k = 0; k < N; ++k) {
-    const auto& xr = ref_window[static_cast<std::size_t>(k)];
+    // Control applied at step k affects the state at k+1, so compare to the next reference sample.
+    const int kref = std::min(static_cast<int>(ref_window.size()) - 1, k + 1);
+    const auto& xr = ref_window[static_cast<std::size_t>(kref)];
 
     const double delta = sat(deltas[static_cast<std::size_t>(std::min(k, static_cast<int>(deltas.size()) - 1))], p_.delta_max);
     const double dvx_now = (xr[3] - m.state()[3]);
@@ -122,7 +124,9 @@ std::vector<NmpcLogStep> NmpcTracker::track(const std::vector<Vec<BikeModel::NX>
     }
 
     const double delta = sat(delta_seq.empty() ? last_delta : delta_seq.front(), p_.delta_max);
-    const double dvx_now = ref[static_cast<std::size_t>(k)][3] - exec.state()[3];
+    // Like the rollout, target the *next* reference velocity since this control is applied over the next dt.
+    const int kref = std::min(N - 1, k + 1);
+    const double dvx_now = ref[static_cast<std::size_t>(kref)][3] - exec.state()[3];
     const double sfx = sat(p_.kv_vx * dvx_now, p_.sfx_max);
     u = Vec<BikeModel::NU>{delta, sfx};
     last_delta = delta;

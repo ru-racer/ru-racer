@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="0" date="2026-02-04" description="Straight 2-lane edge-case: sudden blocker + oncoming vehicle (parameter sweep)" author="ru_racer"/>
+  <ParameterDeclarations>
+    <ParameterDeclaration name="scenario_name" value="straight_edge_oncoming_block"/>
+    <ParameterDeclaration name="road_shape" value="tangent"/>
+    <ParameterDeclaration name="road_length_m" value="140.0"/>
+    <ParameterDeclaration name="lane_width_m" value="3.6"/>
+    <ParameterDeclaration name="num_lanes" value="2"/>
+    <ParameterDeclaration name="ppm" value="10"/>
+
+    <!-- Ego lane center: +lane_width/2 (right lane) by default -->
+    <ParameterDeclaration name="ego_lane_sign" value="+1"/> <!-- +1 => y=+lane_width/2, -1 => y=-lane_width/2 -->
+
+    <!-- Parameter sweeps (comma-separated lists) -->
+    <ParameterDeclaration name="ego_speed_list" value="6,10,14"/>
+    <ParameterDeclaration name="block_time_s_list" value="2,4,6"/>
+    <ParameterDeclaration name="block_dist_m_list" value="6,10,14"/>
+    <ParameterDeclaration name="blocker_type_list" value="barrier,truck"/>
+    <ParameterDeclaration name="oncoming_speed_list" value="6,10,14"/>
+    <ParameterDeclaration name="oncoming_init_dist_list" value="40,60,80"/>
+    <ParameterDeclaration name="oncoming_type_list" value="car,truck"/>
+
+    <!-- Goal is a set-point down the lane -->
+    <ParameterDeclaration name="goal_x" value="130.0"/>
+
+    <!-- Road conditions -->
+    <ParameterDeclaration name="road_conditions" value="dry,wet,snow,ice"/>
+  </ParameterDeclarations>
+</OpenSCENARIO>
+

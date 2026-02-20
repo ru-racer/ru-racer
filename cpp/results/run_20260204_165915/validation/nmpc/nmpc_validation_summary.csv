@@ -1,0 +1,4 @@
+scenario,T,rms_pos_err,final_pos_err,final_vx_err
+ref_straight,10.000000,7.946948,11.691951,-7.456296
+ref_constant_steer,10.000000,17.710700,49.013631,-14.265782
+ref_sine_steer,10.000000,34.612068,99.251940,7.325508

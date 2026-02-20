@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSCENARIO>
+  <FileHeader revMajor="1" revMinor="0" date="2026-02-04" description="Straight road scenario (parameter-only)" author="ru_racer"/>
+  <ParameterDeclarations>
+    <!-- vehicle config is provided via CLI; scenario provides geometry + goals -->
+    <ParameterDeclaration name="scenario_name" value="straight_setpoint"/>
+    <ParameterDeclaration name="road_shape" value="tangent"/>
+    <ParameterDeclaration name="road_length_m" value="120.0"/>
+    <ParameterDeclaration name="road_width_m" value="8.0"/>
+    <ParameterDeclaration name="ppm" value="10"/> <!-- pixels per meter for generated map -->
+
+    <!-- Start/goal in world coordinates -->
+    <ParameterDeclaration name="start_x" value="0.0"/>
+    <ParameterDeclaration name="start_y" value="0.0"/>
+    <ParameterDeclaration name="start_psi" value="0.0"/>
+    <ParameterDeclaration name="start_vx" value="12.0"/>
+    <ParameterDeclaration name="goal_x" value="110.0"/>
+    <ParameterDeclaration name="goal_y" value="0.0"/>
+    <ParameterDeclaration name="goal_psi" value="0.0"/>
+    <ParameterDeclaration name="goal_vx" value="15.0"/>
+
+    <!-- Which road conditions to test -->
+    <ParameterDeclaration name="road_conditions" value="dry,wet,snow,ice"/>
+  </ParameterDeclarations>
+</OpenSCENARIO>
+

@@ -107,8 +107,8 @@ bool BikeModel::checkFeasible(const Vec<NX>& x, const Vec<NX>& dx) const {
   // Occupancy grid feasibility (if provided): also mimic Bike.check_feasibility_map vx limits.
   if (grid_) {
     const double vx = x[3];
-    if (vx <= 0.0) return false;
-    if (vx >= 5.0) return false;
+    if (vx <= map_vx_min_) return false;
+    if (vx >= map_vx_max_) return false;
     if (!grid_->isFreeWorld(x[0], x[1])) return false;
   }
 
