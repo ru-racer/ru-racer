@@ -1,0 +1,5 @@
+# Optional dependencies for scenario validation framework
+# Core (numpy, matplotlib) used by roadgen/scripts - typically already available
+numpy>=1.18
+matplotlib>=3.0
+pyyaml>=5.0   # Required for YAML scenario files (.yaml)

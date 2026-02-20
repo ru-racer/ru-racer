@@ -1,46 +1,48 @@
-## Scenario-based validation (OpenSCENARIO-style)
+# Scenario Validation Framework
 
-This folder provides a **scenario-based validation** workflow:
-- Choose a **vehicle config** (small / full-size).
-- Choose a **scenario** defined in a minimal **OpenSCENARIO (`.xosc`) parameter style**.
-- Automatically generate a **synthetic road occupancy map** (PGM) for common road alignments.
-- Run **planner + NMPC** on multiple **road friction conditions** and summarize success/metrics.
+Systematic validation of planners and controllers against defined scenarios with explicit expected outcomes and metrics.
 
-### What “OpenSCENARIO-style” means here
+## Quick Start
 
-We do **not** implement the full OpenSCENARIO specification.
-Instead, we use the standard OpenSCENARIO XML container and read only:
-- `ParameterDeclarations/ParameterDeclaration` (name + value)
+1. Build the C++ binary:
+   ```bash
+   cmake -S cpp -B cpp/build && cmake --build cpp/build -j
+   ```
 
-This keeps scenarios easy to edit while staying compatible with `.xosc` files.
+2. Install Python deps (optional, for YAML scenarios):
+   ```bash
+   pip install pyyaml
+   ```
 
-### Quick start
+3. Run a single scenario:
+   ```bash
+   python cpp/scenario_validation/run_scenario_suite.py \
+     --scenario cpp/scenario_validation/scenarios/straight_dry.yaml \
+     --vehicle-cfg cpp/scenarios/fullsize_setpoint_common.cfg
+   ```
 
-```bash
-cd "/Users/mojyx/Documents/GA/AV Research/ru-racer"
-python3 cpp/scenario_validation/run_openscenario_validation.py \
-  --scenario cpp/scenario_validation/scenarios/straight.xosc \
-  --vehicle-cfg cpp/data/fullsize_car.cfg
-```
+4. Run full suite:
+   ```bash
+   python cpp/scenario_validation/run_scenario_suite.py \
+     --suite cpp/scenario_validation/scenarios/ \
+     --vehicle-cfg cpp/scenarios/fullsize_setpoint_common.cfg
+   ```
 
-Outputs:
-- A run folder under `cpp/results/scenario_validation/run_*/`
-- Per-road-condition runs (each has `rrt_nodes.csv`, `rrt_ref_traj.csv`, `nmpc_exec.csv`, and visuals)
-- `scenario_summary.csv` + summary plots
+## Structure
 
-### Road shapes supported
-- `tangent` (straight)
-- `horizontal_curve` (single arc)
-- `s_curve` (reverse curves)
-- `hairpin` (tight U-turn arc)
-- `roundabout` (circular loop)
+- **`framework/`** — Core validation logic
+  - `scenario_def.py` — Scenario schema (map, state, expected outcome)
+  - `map_region.py` — Map piece builder (roadgen integration)
+  - `metrics.py` — Metrics extraction and pass/fail evaluation
+  - `runner.py` — Orchestrates planner + controller execution
+  - `report.py` — Summary CSV and console output
 
-### Road conditions supported
-Configured in the `.xosc` parameter `road_conditions` (comma-separated).
-Defaults map to a friction scale (applied via `friction_mu_scale_{f,r}0`):
-- `dry` ≈ 1.0
-- `wet` ≈ 0.7
-- `snow` ≈ 0.4
-- `ice` ≈ 0.2
-- `gravel` ≈ 0.5
+- **`scenarios/`** — YAML scenario definitions
+  - `straight_dry.yaml` — Straight road, dry
+  - `curve_wet.yaml` — Horizontal curve, wet
 
+- **`run_scenario_suite.py`** — Entry point
+
+## Scenario Schema
+
+See `docs/SCENARIO_VALIDATION_DESIGN.md` for full design and schema.

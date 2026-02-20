@@ -1,0 +1,38 @@
+# Straight road, dry conditions — basic setpoint tracking
+id: straight_dry_001
+name: "Straight road, dry"
+description: "Basic setpoint tracking on straight road, dry friction"
+
+map_region:
+  type: generated
+  road_shape: tangent
+  road_length_m: 120.0
+  road_width_m: 8.0
+  road_conditions: [dry]
+  obstacles: []
+  ppm: 10
+
+initial_state:
+  x: 0.0
+  y: 0.0
+  psi: 0.0
+  vx: 12.0
+  vy: 0.0
+  r: 0.0
+
+goal_state:
+  x: 110.0
+  y: 0.0
+  psi: 0.0
+  vx: 15.0
+  vy: 0.0
+  r: 0.0
+
+expected_outcome:
+  planner_success: true
+  controller_reaches_goal: true
+  metrics:
+    planner_nodes_max: 50000
+    planner_best_cost_max: 250.0
+    nmpc_rms_pos_err_max: 1.0
+    nmpc_final_pos_err_max: 0.5

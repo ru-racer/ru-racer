@@ -1,0 +1,40 @@
+# Horizontal curve, wet conditions — tests lateral dynamics
+id: curve_wet_001
+name: "Curve, wet"
+description: "90° horizontal curve with reduced friction (wet)"
+
+map_region:
+  type: generated
+  road_shape: horizontal_curve
+  road_length_m: 50.0
+  road_width_m: 8.0
+  road_radius_m: 30.0
+  road_angle_deg: 90.0
+  road_conditions: [wet]
+  obstacles: []
+  ppm: 10
+
+initial_state:
+  x: 0.0
+  y: 0.0
+  psi: 0.0
+  vx: 10.0
+  vy: 0.0
+  r: 0.0
+
+goal_state:
+  x: 30.0
+  y: 30.0
+  psi: 1.57
+  vx: 10.0
+  vy: 0.0
+  r: 0.0
+
+expected_outcome:
+  planner_success: true
+  controller_reaches_goal: true
+  metrics:
+    planner_nodes_max: 80000
+    planner_best_cost_max: 400.0
+    nmpc_rms_pos_err_max: 1.5
+    nmpc_final_pos_err_max: 1.0
